@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,7 +79,18 @@ def main(argv: list[str] | None = None) -> int:
     if cached and (src_dir.glob("video.*")):
         video = next(iter(src_dir.glob("video.*")))
     else:
-        if meta["is_url"]:
+        if meta.get("is_drive"):
+            video = download_mod.download_from_drive(meta["source"], src_dir, basename="video")
+            # After Drive download, probe duration if unknown
+            if meta["duration_s"] == 0.0:
+                proc = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=nw=1:nk=1", str(video)],
+                    capture_output=True, text=True, check=False,
+                )
+                if proc.returncode == 0 and proc.stdout.strip():
+                    meta["duration_s"] = float(proc.stdout.strip())
+        elif meta["is_url"]:
             video = download_mod.download_video(meta["source"], src_dir, basename="video")
         else:
             video = download_mod.copy_local(Path(meta["source"]), src_dir, basename="video")
@@ -89,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         transcript = json.loads(transcript_path.read_text())
     else:
         transcript: list[dict] = []
-        if meta["is_url"]:
+        if meta["is_url"] and not meta.get("is_drive"):
             vtt = transcribe_mod.fetch_native_captions(meta["source"], work / "subs")
             if vtt:
                 transcript = transcribe_mod.dedupe_cues(

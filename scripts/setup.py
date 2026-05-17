@@ -21,7 +21,7 @@ from typing import Optional
 CONFIG_DIR = Path.home() / ".config" / "opencode-watch"
 ENV_PATH = CONFIG_DIR / ".env"
 LIBRARY_ROOT = Path.home() / "opencode-watch" / "library"
-REQUIRED_BINS = ("ffmpeg", "ffprobe", "yt-dlp")
+REQUIRED_BINS = ("ffmpeg", "ffprobe", "yt-dlp", "gdown")
 
 
 def _which(name: str) -> Optional[str]:
@@ -111,8 +111,8 @@ def _print_install_instructions() -> None:
     elif sysname == "windows":
         print("Run (as Administrator in PowerShell):", file=sys.stderr)
         for b in missing:
-            if b == "yt-dlp":
-                print(f"  pip install yt-dlp", file=sys.stderr)
+            if b in ("yt-dlp", "gdown"):
+                print(f"  pip install {b}", file=sys.stderr)
             else:
                 print(f"  winget install --id Gyan.FFmpeg", file=sys.stderr)
         print("Then restart your terminal.", file=sys.stderr)

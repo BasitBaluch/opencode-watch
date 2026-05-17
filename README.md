@@ -4,17 +4,27 @@ Turn any tutorial or lecture video into structured study notes. An opencode skil
 
 ## What it does
 
-1. **Downloads** video via `yt-dlp` (URL or local file)
+1. **Downloads** video via `yt-dlp` (YouTube) or `gdown` (Google Drive)
 2. **Detects scene changes** with `ffmpeg`
 3. **Extracts transcript** — native captions (free) or Whisper API (Groq/OpenAI)
 4. **Extracts frames** at scene boundaries for visual reference
 5. **Writes structured notes** — TLDR, key concepts, timestamped sections, code blocks, diagrams, open questions
+
+## Supported sources
+
+| Source | Works? | Method | Cost |
+|--------|--------|--------|------|
+| YouTube (public) | ✅ | yt-dlp + captions | Free |
+| YouTube (unlisted) | ✅ | yt-dlp + captions | Free |
+| Google Drive (shared) | ✅ | gdown + Whisper | Free download, Whisper optional |
+| Local file | ✅ | Direct path | Free |
 
 ## Prerequisites
 
 - Python 3.10+
 - `ffmpeg` — [Install via winget](https://github.com/GyanD/codexffmpeg)
 - `yt-dlp` — `pip install yt-dlp`
+- `gdown` — `pip install gdown` (for Google Drive)
 - `deno` — [Install via winget](https://deno.land/) (required by yt-dlp for YouTube)
 
 ## Quick Start
@@ -47,6 +57,23 @@ python scripts/watch.py "https://youtube.com/watch?v=..." --whisper groq
 | `--whisper groq\|openai` | Force Whisper backend | auto |
 | `--no-whisper` | Disable Whisper entirely | — |
 | `--out-dir DIR` | Override library root | `~/opencode-watch/library` |
+
+## Google Drive
+
+Google Drive videos are supported via `gdown` (free, no API key needed).
+
+**Requirements:**
+- File must be shared with "Anyone with the link"
+- Install: `pip install gdown`
+
+**Supported URL formats:**
+```
+https://drive.google.com/file/d/<FILE_ID>/view
+https://drive.google.com/open?id=<FILE_ID>
+https://drive.google.com/uc?id=<FILE_ID>
+```
+
+**Note:** Drive videos have no native captions. Transcription requires Whisper API (Groq or OpenAI key). Without Whisper, notes will be frames-only.
 
 ## API Keys (Optional)
 

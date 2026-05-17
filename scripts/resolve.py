@@ -1,8 +1,9 @@
-"""Resolve a video source (URL or local path) to a meta dict."""
+"""Resolve a video source (URL, Google Drive, or local path) to a meta dict."""
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -12,15 +13,36 @@ def is_url(source: str) -> bool:
     return source.startswith("http://") or source.startswith("https://")
 
 
+def is_google_drive(source: str) -> bool:
+    """Check if the source is a Google Drive URL."""
+    return "drive.google.com" in source
+
+
 def hash_source(source: str) -> str:
     return hashlib.sha1(source.encode("utf-8")).hexdigest()
 
 
 def resolve_source(source: str, focus_range: Optional[tuple[float, float]]) -> dict:
     """Probe the source. Returns:
-        {title, duration_s, source, is_url, source_hash, focus_range_str}
+        {title, duration_s, source, is_url, is_drive, source_hash, focus_range_str}
     """
     focus_str = "" if focus_range is None else f"{focus_range[0]}-{focus_range[1]}"
+
+    if is_google_drive(source):
+        # Google Drive: can't probe before download, use placeholder title
+        file_id_match = re.search(r"/file/d/([a-zA-Z0-9_-]+)", source) or \
+                        re.search(r"id=([a-zA-Z0-9_-]+)", source)
+        file_id = file_id_match.group(1) if file_id_match else "unknown"
+        return {
+            "title": f"Google Drive Video ({file_id[:8]})",
+            "duration_s": 0.0,  # Unknown until after download
+            "source": source,
+            "is_url": True,
+            "is_drive": True,
+            "source_hash": hash_source(source),
+            "focus_range_str": focus_str,
+        }
+
     if is_url(source):
         proc = subprocess.run(
             ["yt-dlp", "-j", "--no-playlist", source],
@@ -34,9 +56,11 @@ def resolve_source(source: str, focus_range: Optional[tuple[float, float]]) -> d
             "duration_s": float(info.get("duration") or 0.0),
             "source": source,
             "is_url": True,
+            "is_drive": False,
             "source_hash": hash_source(source),
             "focus_range_str": focus_str,
         }
+
     p = Path(source).expanduser().resolve()
     if not p.exists():
         raise FileNotFoundError(f"local file not found: {p}")
@@ -55,6 +79,7 @@ def resolve_source(source: str, focus_range: Optional[tuple[float, float]]) -> d
         "duration_s": duration,
         "source": str(p),
         "is_url": False,
+        "is_drive": False,
         "source_hash": hash_source(str(p)),
         "focus_range_str": focus_str,
     }
